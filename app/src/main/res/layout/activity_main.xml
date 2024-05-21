@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/helloLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bonjour !"
+        android:textSize="18sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+
+    <Button
+        android:id="@+id/flightButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Flight"
+        android:layout_below="@id/helloLabel"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+<!--
+    <Button
+        android:id="@+id/disconnectButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Disconnect"
+        android:layout_below="@id/flightButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+-->
+    <Button
+        android:id="@+id/friendButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Friends"
+        android:layout_below="@id/flightButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+
+    <Button
+        android:id="@+id/tripButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Trips"
+        android:layout_below="@id/friendButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+
+</RelativeLayout>
