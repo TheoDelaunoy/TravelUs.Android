@@ -5,17 +5,16 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 //import com.example.travelusandroid.database.UserTableModel;
+import com.example.travelusandroid.Activities.FlightsActivities.InspirationActivity;
 import com.example.travelusandroid.FlightAPI.FlightsToken;
 //import com.example.travelus.views.Friends.TabsFriendPage;
 //import com.example.travelus.views.Flight.InspirationPage;
 //import com.example.travelus.views.Sharing.TripTabsPage;
 
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         flightButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //flightButtonClicked();
+                flightButtonClicked();
             }
         });
 
@@ -78,28 +77,15 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-/*
+
     private void flightButtonClicked() {
-        try {
-            flightsToken.getAccessTokenAsync(new FlightsToken.Callback() {
-                @Override
-                public void onSuccess() {
-                    Intent intent = new Intent(MainActivity.this, InspirationPage.class);
-                    intent.putExtra("flightsToken", flightsToken);
-                    intent.putExtra("user", myUser);
+            //flightsToken.getAccessTokenAsync(new FlightsToken.Callback() {
+                    Intent intent = new Intent(MainActivity.this, InspirationActivity.class);
+                    //intent.putExtra("flightsToken", flightsToken);
+                    //intent.putExtra("user", myUser);
                     startActivity(intent);
-                }
-
-                @Override
-                public void onError(Exception ex) {
-                    Toast.makeText(MainActivity.this, "Erreur: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        } catch (Exception ex) {
-            Toast.makeText(this, "Erreur: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
-        }
     }
-
+/*
     private void disconnectButtonClicked() {
         getSharedPreferences("app", MODE_PRIVATE).edit().remove(KEY_TOKEN).apply();
         finish();

@@ -13,6 +13,10 @@
         android:theme="@style/Theme.TravelUsAndroid"
         tools:targetApi="31">
         <activity
+            android:name=".Activities.FlightsActivities.InspirationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TravelUsAndroid" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.TravelUsAndroid">
