@@ -2,6 +2,7 @@ package com.example.travelusandroid;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -10,7 +11,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 //import com.example.travelusandroid.database.UserTableModel;
 import com.example.travelusandroid.Activities.FlightsActivities.InspirationActivity;
-import com.example.travelusandroid.FlightAPI.FlightsToken;
+import com.example.travelusandroid.FlightAPI.AmadeusClient;
+import com.example.travelusandroid.FlightAPI.TokenAPI;
+import com.example.travelusandroid.FlightAPI.TokenInterface;
+import com.example.travelusandroid.Models.Basics.AmadeusToken;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 //import com.example.travelus.views.Friends.TabsFriendPage;
 //import com.example.travelus.views.Flight.InspirationPage;
 //import com.example.travelus.views.Sharing.TripTabsPage;
@@ -18,8 +26,10 @@ import com.example.travelusandroid.FlightAPI.FlightsToken;
 
 public class MainActivity extends AppCompatActivity {
 
-    private FlightsToken flightsToken;
+    private static String API_KEY = "74gCH4xEzsTqR8v8tmRq5VTeVU1I62j5";
+    private static String API_SECRET = "VNvwxPnQFwwZl5cT";
 
+    private TokenAPI tokenAPI;
     private TextView helloLabel;
     private Button flightButton;
 
@@ -33,10 +43,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Log.w("MainActivity", "Main Activity Entered");
+
         // Get user from intent
         //myUser = (UserTableModel) getIntent().getSerializableExtra("user");
 
-        flightsToken = new FlightsToken();
+        tokenAPI = new TokenAPI();
         helloLabel = findViewById(R.id.helloLabel);
         //helloLabel.setText("Bonjour " + myUser.getPseudo() + " !");
 
@@ -78,13 +90,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void flightButtonClicked() {
-            //flightsToken.getAccessTokenAsync(new FlightsToken.Callback() {
-                    Intent intent = new Intent(MainActivity.this, InspirationActivity.class);
-                    //intent.putExtra("flightsToken", flightsToken);
-                    //intent.putExtra("user", myUser);
-                    startActivity(intent);
+    private void flightButtonClicked(){
+        TokenInterface tokenInterface = AmadeusClient.getClient().create(TokenInterface.class);
+        Call<AmadeusToken> call = tokenInterface.getAccessToken("client_credentials", API_KEY, API_SECRET);
+        call.enqueue(new Callback<AmadeusToken>() {
+            @Override
+            public void onResponse(Call<AmadeusToken> call, Response<AmadeusToken> response) {
+                if(response.isSuccessful()){
+                    AmadeusToken token = response.body();
+                    if(token != null){
+                        Log.d("Token", "Access Token: " + token.getAccess_token());
+                        Intent intent = new Intent(MainActivity.this, InspirationActivity.class);
+                        intent.putExtra("flightsToken", token.getAccess_token());
+                        startActivity(intent);
+                    }
+                } else {
+                    Log.e("API Error", "Response Code: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<AmadeusToken> call, Throwable t) {
+                Log.e("API Error", "Error: " + t.getMessage());
+            }
+        });
+        //intent.putExtra("user", myUser);
     }
+
+
 /*
     private void disconnectButtonClicked() {
         getSharedPreferences("app", MODE_PRIVATE).edit().remove(KEY_TOKEN).apply();
