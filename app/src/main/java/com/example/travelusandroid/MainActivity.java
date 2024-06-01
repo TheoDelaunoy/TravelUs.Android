@@ -12,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity;
 //import com.example.travelusandroid.database.UserTableModel;
 import com.example.travelusandroid.Activities.FlightsActivities.InspirationActivity;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
-import com.example.travelusandroid.FlightAPI.TokenAPI;
 import com.example.travelusandroid.FlightAPI.TokenInterface;
 import com.example.travelusandroid.Models.Basics.AmadeusToken;
 
@@ -29,7 +28,6 @@ public class MainActivity extends AppCompatActivity {
     private static String API_KEY = "74gCH4xEzsTqR8v8tmRq5VTeVU1I62j5";
     private static String API_SECRET = "VNvwxPnQFwwZl5cT";
 
-    private TokenAPI tokenAPI;
     private TextView helloLabel;
     private Button flightButton;
 
@@ -48,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
         // Get user from intent
         //myUser = (UserTableModel) getIntent().getSerializableExtra("user");
 
-        tokenAPI = new TokenAPI();
         helloLabel = findViewById(R.id.helloLabel);
         //helloLabel.setText("Bonjour " + myUser.getPseudo() + " !");
 
