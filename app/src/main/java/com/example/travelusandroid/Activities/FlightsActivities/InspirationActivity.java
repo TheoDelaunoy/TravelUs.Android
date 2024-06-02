@@ -127,6 +127,13 @@ public class InspirationActivity extends AppCompatActivity {
         budgetEntry.setLayoutParams(editTextLayoutParams);
         deleteButton.setLayoutParams(deleteButtonLayoutParams);
 
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_dropdown_item_1line, allCities);
+
+        // Set the adapter to the AutoCompleteTextView
+        cityTextView.setThreshold(3);
+        cityTextView.setAdapter(adapter);
+
         newUser.addView(cityTextView);
         newUser.addView(budgetEntry);
         newUser.addView(checkBox);
@@ -136,11 +143,7 @@ public class InspirationActivity extends AppCompatActivity {
 
 
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_dropdown_item_1line, allCities);
 
-        // Set the adapter to the AutoCompleteTextView
-        cityTextView.setAdapter(adapter);
     }
 
     private void searchButtonClicked() throws InterruptedException {
