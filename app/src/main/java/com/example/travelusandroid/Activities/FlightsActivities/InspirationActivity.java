@@ -9,6 +9,8 @@ import com.example.travelusandroid.Datas.DatabaseClient;
 import com.example.travelusandroid.Datas.OnReceived.OnEnglishCityReceived;
 import com.example.travelusandroid.R;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,8 +24,12 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -68,11 +74,7 @@ public class InspirationActivity extends AppCompatActivity {
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
                     searchButtonClicked();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
             }
         });
     }
@@ -137,7 +139,7 @@ public class InspirationActivity extends AppCompatActivity {
 
     }
 
-    private void searchButtonClicked() throws InterruptedException {
+    private void searchButtonClicked() {
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
         List<String> englishCities = new ArrayList<>();
         int year = dateDeparture.getYear();
@@ -145,20 +147,38 @@ public class InspirationActivity extends AppCompatActivity {
         int dayOfMonth = dateDeparture.getDayOfMonth();
 
         int childCount = userLayout.getChildCount();
+        CountDownLatch latch = new CountDownLatch(childCount); // Initialize CountDownLatch with the number of children
 
         for (int i = 0; i < childCount; i++) {
             LinearLayout linearLayout = (LinearLayout) userLayout.getChildAt(i);
             AutoCompleteTextView City = (AutoCompleteTextView) linearLayout.getChildAt(0);
 
-            getEnglishCity(new OnEnglishCityReceived() {
+            getEnglishCitySynchronous(new OnEnglishCityReceived() {
                 @Override
                 public void onEnglishCityReceived(String englishCity) {
                     englishCities.add(englishCity);
-                    Log.d("EnglishCity", englishCity);
+                    latch.countDown(); // Decrement the latch count
                 }
             }, City.getText().toString());
         }
+
+        // Create a new thread to wait for all network calls to complete
+        new Thread(() -> {
+            try {
+                latch.await(); // Wait until the count reaches zero
+            } catch (InterruptedException e) {
+                Log.d("Stack Trace", Objects.requireNonNull(e.getMessage()));
+            }
+
+            // Now iterate over englishCities
+            runOnUiThread(() -> {
+                for (String englishCity : englishCities) {
+                    Log.d("TEST", englishCity);
+                }
+            });
+        }).start();
     }
+
 
     public void getEnglishCity(final OnEnglishCityReceived listener,String city){
         String trueCity = extractCityName(city);
@@ -171,7 +191,11 @@ public class InspirationActivity extends AppCompatActivity {
                     String englishCity = response.body();
                     if(englishCity != null){
                         Log.d("DB Call", "English City received");
-                        listener.onEnglishCityReceived(englishCity);
+                        try {
+                            listener.onEnglishCityReceived(englishCity);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                 } else {
                     Log.e("API Error", "Response Code: " + response.code());
@@ -184,6 +208,43 @@ public class InspirationActivity extends AppCompatActivity {
             }
         });
     }
+
+    public void getEnglishCitySynchronous(final OnEnglishCityReceived listener, String city) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String trueCity = extractCityName(city);
+                    AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
+                    Call<String> call = airportInterface.getEnglishCity(trueCity);
+                    Response<String> response = call.execute();
+
+                    if (response.isSuccessful()) {
+                        String englishCity = response.body();
+                        if (englishCity != null) {
+                            Log.d("DB Call", "English City received");
+                            // Post the result back to the main thread
+                            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        listener.onEnglishCityReceived(englishCity);
+                                    } catch (InterruptedException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            });
+                        }
+                    } else {
+                        Log.e("API Error", "Response Code: " + response.code());
+                    }
+                } catch (IOException e) {
+                    Log.e("API Error", "Error: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+
 
 
 
