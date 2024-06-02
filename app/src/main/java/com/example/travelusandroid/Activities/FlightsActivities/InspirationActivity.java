@@ -133,10 +133,6 @@ public class InspirationActivity extends AppCompatActivity {
         newUser.addView(deleteButton);
 
         userLayout.addView(newUser);
-
-
-
-
     }
 
     private void searchButtonClicked() {
@@ -149,20 +145,31 @@ public class InspirationActivity extends AppCompatActivity {
         int childCount = userLayout.getChildCount();
         CountDownLatch latch = new CountDownLatch(childCount); // Initialize CountDownLatch with the number of children
 
+        initiateCitySearch(childCount, latch, englishCities);
+
+        waitForAllCitiesToBeFetched(latch, englishCities);
+    }
+
+    private void initiateCitySearch(int childCount, CountDownLatch latch, List<String> englishCities) {
         for (int i = 0; i < childCount; i++) {
             LinearLayout linearLayout = (LinearLayout) userLayout.getChildAt(i);
             AutoCompleteTextView City = (AutoCompleteTextView) linearLayout.getChildAt(0);
 
-            getEnglishCitySynchronous(new OnEnglishCityReceived() {
-                @Override
-                public void onEnglishCityReceived(String englishCity) {
-                    englishCities.add(englishCity);
-                    latch.countDown(); // Decrement the latch count
-                }
-            }, City.getText().toString());
+            fetchEnglishCity(latch, englishCities, City.getText().toString());
         }
+    }
 
-        // Create a new thread to wait for all network calls to complete
+    private void fetchEnglishCity(CountDownLatch latch, List<String> englishCities, String city) {
+        getEnglishCitySynchronous(new OnEnglishCityReceived() {
+            @Override
+            public void onEnglishCityReceived(String englishCity) {
+                englishCities.add(englishCity);
+                latch.countDown(); // Decrement the latch count
+            }
+        }, city);
+    }
+
+    private void waitForAllCitiesToBeFetched(CountDownLatch latch, List<String> englishCities) {
         new Thread(() -> {
             try {
                 latch.await(); // Wait until the count reaches zero
@@ -170,44 +177,18 @@ public class InspirationActivity extends AppCompatActivity {
                 Log.d("Stack Trace", Objects.requireNonNull(e.getMessage()));
             }
 
-            // Now iterate over englishCities
-            runOnUiThread(() -> {
-                for (String englishCity : englishCities) {
-                    Log.d("TEST", englishCity);
-                }
-            });
+            displayFetchedCities(englishCities);
         }).start();
     }
 
-
-    public void getEnglishCity(final OnEnglishCityReceived listener,String city){
-        String trueCity = extractCityName(city);
-        AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
-        Call<String> call = airportInterface.getEnglishCity(trueCity);
-        call.enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if(response.isSuccessful()){
-                    String englishCity = response.body();
-                    if(englishCity != null){
-                        Log.d("DB Call", "English City received");
-                        try {
-                            listener.onEnglishCityReceived(englishCity);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                } else {
-                    Log.e("API Error", "Response Code: " + response.code());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Log.e("API Error", "Error: " + t.getMessage());
+    private void displayFetchedCities(List<String> englishCities) {
+        runOnUiThread(() -> {
+            for (String englishCity : englishCities) {
+                Log.d("TEST", englishCity);
             }
         });
     }
+
 
     public void getEnglishCitySynchronous(final OnEnglishCityReceived listener, String city) {
         new Thread(new Runnable() {
@@ -246,14 +227,11 @@ public class InspirationActivity extends AppCompatActivity {
     }
 
 
-
-
     private String extractCityName(String input) {
         int index = input.indexOf('(');
         String cityName = index != -1 ? input.substring(0, index).trim() : input;
         return cityName;
     }
-
 
     public void getCities(){
         AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
