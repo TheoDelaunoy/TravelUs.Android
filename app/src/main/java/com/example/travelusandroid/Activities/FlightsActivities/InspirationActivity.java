@@ -1,20 +1,12 @@
 package com.example.travelusandroid.Activities.FlightsActivities;
 
-import android.content.Intent;
 import android.os.Bundle;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.example.travelusandroid.Datas.AirportInterface;
 import com.example.travelusandroid.Datas.DatabaseClient;
-import com.example.travelusandroid.FlightAPI.AmadeusClient;
-import com.example.travelusandroid.FlightAPI.TokenInterface;
-import com.example.travelusandroid.MainActivity;
-import com.example.travelusandroid.Models.Basics.AmadeusToken;
+import com.example.travelusandroid.Datas.OnReceived.OnEnglishCityReceived;
 import com.example.travelusandroid.R;
 
 import android.util.Log;
@@ -47,7 +39,6 @@ public class InspirationActivity extends AppCompatActivity {
     private ListView destinationCell;
 
     private List<String> allCities;
-    private List<String> englishCities;
 
     //private List<FlightClass> flightClasses = new ArrayList<>();
 
@@ -148,8 +139,7 @@ public class InspirationActivity extends AppCompatActivity {
 
     private void searchButtonClicked() throws InterruptedException {
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
-        englishCities = new ArrayList<>();
-
+        List<String> englishCities = new ArrayList<>();
         int year = dateDeparture.getYear();
         int month = dateDeparture.getMonth() + 1;
         int dayOfMonth = dateDeparture.getDayOfMonth();
@@ -160,15 +150,17 @@ public class InspirationActivity extends AppCompatActivity {
             LinearLayout linearLayout = (LinearLayout) userLayout.getChildAt(i);
             AutoCompleteTextView City = (AutoCompleteTextView) linearLayout.getChildAt(0);
 
-            //getEnglishCity(City.getText().toString());
-        }
-
-        for(int i = 0; i < englishCities.size(); i++){
-            Log.d("EnglishCity",englishCities.get(i));
+            getEnglishCity(new OnEnglishCityReceived() {
+                @Override
+                public void onEnglishCityReceived(String englishCity) {
+                    englishCities.add(englishCity);
+                    Log.d("EnglishCity", englishCity);
+                }
+            }, City.getText().toString());
         }
     }
 
-    public void getEnglishCity(String city){
+    public void getEnglishCity(final OnEnglishCityReceived listener,String city){
         String trueCity = extractCityName(city);
         AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
         Call<String> call = airportInterface.getEnglishCity(trueCity);
@@ -176,10 +168,10 @@ public class InspirationActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
                 if(response.isSuccessful()){
-                    String city = response.body();
-                    if(city != null){
+                    String englishCity = response.body();
+                    if(englishCity != null){
                         Log.d("DB Call", "English City received");
-                        englishCities.add(city);
+                        listener.onEnglishCityReceived(englishCity);
                     }
                 } else {
                     Log.e("API Error", "Response Code: " + response.code());
