@@ -11,7 +11,9 @@ import com.example.travelusandroid.Datas.OnReceived.OnEnglishCityReceived;
 import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
 import com.example.travelusandroid.FlightAPI.CityInterface;
+import com.example.travelusandroid.FlightAPI.FlightInterface;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
+import com.example.travelusandroid.Models.Requests.AmadeusFlightAnywhere;
 import com.example.travelusandroid.Models.Requests.CityIATA.CityIATA;
 import com.example.travelusandroid.Models.Requests.CityIATA.LocationData;
 import com.example.travelusandroid.R;
@@ -55,8 +57,9 @@ public class InspirationActivity extends AppCompatActivity {
     private ListView destinationCell;
 
     private List<String> allCities;
+    private String departureDate;
     private List<FlightInspirationParameters> flightInspirationParametersList;
-    private List<String> inspirationCities;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,6 +156,17 @@ public class InspirationActivity extends AppCompatActivity {
         int year = dateDeparture.getYear();
         int month = dateDeparture.getMonth() + 1;
         int dayOfMonth = dateDeparture.getDayOfMonth();
+        String monthString = String.valueOf(month);
+        String dayString = String.valueOf(dayOfMonth);
+        if(month<10)
+        {
+            monthString = "0" + month;
+        }
+        if (dayOfMonth<10){
+            dayString = "0" + dayOfMonth;
+        }
+
+        departureDate = year + "-" + monthString + "-" + dayString;
 
         int childCount = userLayout.getChildCount();
         CountDownLatch latch = new CountDownLatch(childCount); // Initialize CountDownLatch with the number of children
@@ -217,12 +231,13 @@ public class InspirationActivity extends AppCompatActivity {
                 getInspirationsSynchronous(new OnInspirationReceived() {
                     @Override
                     public void onInspirationReceived(String departureCity) throws InterruptedException, IOException {
-                        // TODO: Put Inspiration City in Top List
                         inspirationLatch.countDown();
                     }
                 }, flightInspirationParameters);
             }
         });
+
+        waitForAllInspirationsToBeFound(inspirationLatch);
     }
 
     public void getInspirationsSynchronous(final OnInspirationReceived inspirationListener, FlightInspirationParameters flightInspirationParameters){
@@ -234,9 +249,32 @@ public class InspirationActivity extends AppCompatActivity {
                         return iataCode;
                     }).get();
                     flightInspirationParameters.setCityIata(cityIATA);
-                    // TODO: Get Inspirations
+                    FlightInterface flightInterface = AmadeusClient.getClient().create(FlightInterface.class);
+                    Call<AmadeusFlightAnywhere> call = null;
+                    if(flightInspirationParameters.getBudget() == 0){
+                        call = flightInterface.getFlightsAnywhereWithoutBudget(token, flightInspirationParameters.getCityIata(), departureDate, true, !flightInspirationParameters.isHasStopovers(), "DESTINATION");
+                    }else{
+                        call = flightInterface.getFlightsAnywhereWithBudget(token, flightInspirationParameters.getCityIata(), departureDate, true, !flightInspirationParameters.isHasStopovers(), flightInspirationParameters.getBudget(), "DESTINATION");
+                    }
+                    Response<AmadeusFlightAnywhere> response = call.execute();
+                    AmadeusFlightAnywhere inspirations = response.body();
+                    // TODO: Put Inspiration City in Top List
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                inspirationListener.onInspirationReceived(flightInspirationParameters.getCityIata());
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
 
                 } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -303,6 +341,18 @@ public class InspirationActivity extends AppCompatActivity {
                     Log.e("API Error", "Error: " + e.getMessage());
                 }
             }
+        }).start();
+    }
+
+    private void waitForAllInspirationsToBeFound(CountDownLatch inspirationLatch){
+        new Thread(() -> {
+            try {
+                inspirationLatch.await(); // Wait until the count reaches zero
+            } catch (InterruptedException e) {
+                Log.d("Stack Trace", Objects.requireNonNull(e.getMessage()));
+            }
+            Log.d("Latch", "Latch finished");
+            //TODO: Continue here (Get Only Common Cities, Display Them...)
         }).start();
     }
 
