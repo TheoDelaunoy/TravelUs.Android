@@ -149,7 +149,6 @@ public class InspirationActivity extends AppCompatActivity {
 
     private void searchButtonClicked() {
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
-        List<String> englishCities = new ArrayList<>();
         flightInspirationParametersList = new ArrayList<>();
         int year = dateDeparture.getYear();
         int month = dateDeparture.getMonth() + 1;
@@ -158,12 +157,12 @@ public class InspirationActivity extends AppCompatActivity {
         int childCount = userLayout.getChildCount();
         CountDownLatch latch = new CountDownLatch(childCount); // Initialize CountDownLatch with the number of children
 
-        initiateCitySearch(childCount, latch, englishCities);
+        initiateCitySearch(childCount, latch);
 
-        waitForAllCitiesToBeFetched(latch, englishCities);
+        waitForAllCitiesToBeFetched(latch);
     }
 
-    private void initiateCitySearch(int childCount, CountDownLatch latch, List<String> englishCities) {
+    private void initiateCitySearch(int childCount, CountDownLatch latch) {
         for (int i = 0; i < childCount; i++) {
             LinearLayout linearLayout = (LinearLayout) userLayout.getChildAt(i);
 
@@ -185,21 +184,21 @@ public class InspirationActivity extends AppCompatActivity {
             flightInspirationParameters.setHasStopovers(hasStepoversBoolean);
             flightInspirationParametersList.add(flightInspirationParameters);
             // TO CHANGE
-            fetchEnglishCity(latch, englishCities, cityText, i);
+            fetchEnglishCity(latch, flightInspirationParameters, i);
         }
     }
 
-    private void fetchEnglishCity(CountDownLatch latch, List<String> englishCities, String city, int iteration) {
+    private void fetchEnglishCity(CountDownLatch latch, FlightInspirationParameters flightInspirationParameters, int iteration) {
         getEnglishCitySynchronous(new OnEnglishCityReceived() {
             @Override
-            public void onEnglishCityReceived(String englishCity) {
-                englishCities.add(englishCity);
+            public void onEnglishCityReceived(FlightInspirationParameters flightInspirationParameters1, int iteration) {
+                flightInspirationParametersList.get(iteration).setDepartureCity(flightInspirationParameters1.getDepartureCity());
                 latch.countDown(); // Decrement the latch count
             }
-        }, city);
+        }, flightInspirationParameters, iteration);
     }
 
-    private void waitForAllCitiesToBeFetched(CountDownLatch latch, List<String> englishCities) {
+    private void waitForAllCitiesToBeFetched(CountDownLatch latch) {
         new Thread(() -> {
             try {
                 latch.await(); // Wait until the count reaches zero
@@ -207,35 +206,36 @@ public class InspirationActivity extends AppCompatActivity {
                 Log.d("Stack Trace", Objects.requireNonNull(e.getMessage()));
             }
 
-            displayFetchedCities(englishCities);
+            displayFetchedCities();
         }).start();
     }
 
-    private void displayFetchedCities(List<String> englishCities) {
-        CountDownLatch inspirationLatch = new CountDownLatch(englishCities.size());
+    private void displayFetchedCities() {
+        CountDownLatch inspirationLatch = new CountDownLatch(flightInspirationParametersList.size());
         runOnUiThread(() -> {
-            for (String englishCity : englishCities) {
+            for (FlightInspirationParameters flightInspirationParameters : flightInspirationParametersList) {
                 getInspirationsSynchronous(new OnInspirationReceived() {
                     @Override
                     public void onInspirationReceived(String departureCity) throws InterruptedException, IOException {
                         // TODO: Put Inspiration City in Top List
                         inspirationLatch.countDown();
                     }
-                }, englishCity);
+                }, flightInspirationParameters);
             }
         });
     }
 
-    public void getInspirationsSynchronous(final OnInspirationReceived inspirationListener, String englishCity){
+    public void getInspirationsSynchronous(final OnInspirationReceived inspirationListener, FlightInspirationParameters flightInspirationParameters){
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    String cityIATA = getIata(englishCity).thenApply(iataCode -> {
+                    String cityIATA = getIata(flightInspirationParameters.getDepartureCity()).thenApply(iataCode -> {
                         return iataCode;
                     }).get();
+                    flightInspirationParameters.setCityIata(cityIATA);
                     // TODO: Get Inspirations
-                    Log.d("City IATA", cityIATA);
+
                 } catch (ExecutionException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -269,12 +269,12 @@ public class InspirationActivity extends AppCompatActivity {
     }
 
 
-    public void getEnglishCitySynchronous(final OnEnglishCityReceived listener, String city) {
+    public void getEnglishCitySynchronous(final OnEnglishCityReceived listener, FlightInspirationParameters flightInspirationParameters, int iteration) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    String trueCity = extractCityName(city);
+                    String trueCity = extractCityName(flightInspirationParameters.getDepartureCity());
                     AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
                     Call<String> call = airportInterface.getEnglishCity(trueCity);
                     Response<String> response = call.execute();
@@ -283,12 +283,13 @@ public class InspirationActivity extends AppCompatActivity {
                         String englishCity = response.body();
                         if (englishCity != null) {
                             Log.d("DB Call", "English City received");
+                            flightInspirationParameters.setDepartureCity(englishCity);
                             // Post the result back to the main thread
                             new Handler(Looper.getMainLooper()).post(new Runnable() {
                                 @Override
                                 public void run() {
                                     try {
-                                        listener.onEnglishCityReceived(englishCity);
+                                        listener.onEnglishCityReceived(flightInspirationParameters, iteration);
                                     } catch (InterruptedException e) {
                                         throw new RuntimeException(e);
                                     }
