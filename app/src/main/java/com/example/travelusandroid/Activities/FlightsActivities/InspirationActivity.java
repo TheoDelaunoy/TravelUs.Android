@@ -1,5 +1,6 @@
 package com.example.travelusandroid.Activities.FlightsActivities;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -7,7 +8,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.travelusandroid.Datas.AirportInterface;
 import com.example.travelusandroid.Datas.DatabaseClient;
 import com.example.travelusandroid.Datas.OnReceived.OnEnglishCityReceived;
+import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
+import com.example.travelusandroid.FlightAPI.AmadeusClient;
+import com.example.travelusandroid.FlightAPI.CityInterface;
+import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
+import com.example.travelusandroid.Models.Requests.CityIATA.CityIATA;
+import com.example.travelusandroid.Models.Requests.CityIATA.LocationData;
 import com.example.travelusandroid.R;
+import com.example.travelusandroid.Utils.StringUtils;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -30,6 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -37,7 +47,7 @@ import retrofit2.Response;
 
 public class InspirationActivity extends AppCompatActivity {
 
-    private LinearLayout frameStack;
+    private String token;
     private LinearLayout labelStack;
     private LinearLayout userLayout;
     private DatePicker dateDeparture;
@@ -45,12 +55,14 @@ public class InspirationActivity extends AppCompatActivity {
     private ListView destinationCell;
 
     private List<String> allCities;
-
-    //private List<FlightClass> flightClasses = new ArrayList<>();
+    private List<FlightInspirationParameters> flightInspirationParametersList;
+    private List<String> inspirationCities;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Intent intent = getIntent();
+        token = intent.getStringExtra("flightsToken");
         allCities = new ArrayList<>();
         getCities();
         setContentView(R.layout.activity_inspiration);
@@ -138,6 +150,7 @@ public class InspirationActivity extends AppCompatActivity {
     private void searchButtonClicked() {
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
         List<String> englishCities = new ArrayList<>();
+        flightInspirationParametersList = new ArrayList<>();
         int year = dateDeparture.getYear();
         int month = dateDeparture.getMonth() + 1;
         int dayOfMonth = dateDeparture.getDayOfMonth();
@@ -153,13 +166,30 @@ public class InspirationActivity extends AppCompatActivity {
     private void initiateCitySearch(int childCount, CountDownLatch latch, List<String> englishCities) {
         for (int i = 0; i < childCount; i++) {
             LinearLayout linearLayout = (LinearLayout) userLayout.getChildAt(i);
-            AutoCompleteTextView City = (AutoCompleteTextView) linearLayout.getChildAt(0);
 
-            fetchEnglishCity(latch, englishCities, City.getText().toString());
+            AutoCompleteTextView city = (AutoCompleteTextView) linearLayout.getChildAt(0);
+            String cityText = city.getText().toString();
+
+            EditText budget = (EditText) linearLayout.getChildAt(1);
+            int budgetInt = 0;
+            if (!budget.getText().toString().isEmpty()) {
+                budgetInt = Integer.parseInt(budget.getText().toString());
+            }
+
+            CheckBox hasStepovers = (CheckBox) linearLayout.getChildAt(2);
+            boolean hasStepoversBoolean = hasStepovers.isChecked();
+
+            FlightInspirationParameters flightInspirationParameters = new FlightInspirationParameters();
+            flightInspirationParameters.setDepartureCity(cityText);
+            flightInspirationParameters.setBudget(budgetInt);
+            flightInspirationParameters.setHasStopovers(hasStepoversBoolean);
+            flightInspirationParametersList.add(flightInspirationParameters);
+            // TO CHANGE
+            fetchEnglishCity(latch, englishCities, cityText, i);
         }
     }
 
-    private void fetchEnglishCity(CountDownLatch latch, List<String> englishCities, String city) {
+    private void fetchEnglishCity(CountDownLatch latch, List<String> englishCities, String city, int iteration) {
         getEnglishCitySynchronous(new OnEnglishCityReceived() {
             @Override
             public void onEnglishCityReceived(String englishCity) {
@@ -182,9 +212,58 @@ public class InspirationActivity extends AppCompatActivity {
     }
 
     private void displayFetchedCities(List<String> englishCities) {
+        CountDownLatch inspirationLatch = new CountDownLatch(englishCities.size());
         runOnUiThread(() -> {
             for (String englishCity : englishCities) {
-                Log.d("TEST", englishCity);
+                getInspirationsSynchronous(new OnInspirationReceived() {
+                    @Override
+                    public void onInspirationReceived(String departureCity) throws InterruptedException, IOException {
+                        // TODO: Put Inspiration City in Top List
+                        inspirationLatch.countDown();
+                    }
+                }, englishCity);
+            }
+        });
+    }
+
+    public void getInspirationsSynchronous(final OnInspirationReceived inspirationListener, String englishCity){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String cityIATA = getIata(englishCity).thenApply(iataCode -> {
+                        return iataCode;
+                    }).get();
+                    // TODO: Get Inspirations
+                    Log.d("City IATA", cityIATA);
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+    }
+
+    public CompletableFuture<String> getIata(String departureCity) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                CityInterface cityInterface = AmadeusClient.getClient().create(CityInterface.class);
+                Call<CityIATA> call = cityInterface.getCityIata(token, StringUtils.trimEnd(departureCity), "1");
+                Response<CityIATA> response = call.execute();
+
+                if (response.isSuccessful() && response.body() != null) {
+                    CityIATA cityIATA = response.body();
+                    List<LocationData> data = cityIATA.getData();
+
+                    if (data != null && !data.isEmpty()) {
+                        return data.get(0).getIataCode();
+                    } else {
+                        throw new RuntimeException("No data available");
+                    }
+                } else {
+                    throw new IOException("API Error: " + response.code());
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
     }

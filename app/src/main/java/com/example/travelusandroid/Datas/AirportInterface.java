@@ -20,4 +20,6 @@ public interface AirportInterface {
     @GET("aeroports/cityToEnglishCity.php")
     Call<String> getEnglishCity(
             @Query("city") String city);
+
+
 }

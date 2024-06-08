@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
                     if(token != null){
                         Log.d("Token", "Access Token: " + token.getAccess_token());
                         Intent intent = new Intent(MainActivity.this, InspirationActivity.class);
-                        intent.putExtra("flightsToken", token.getAccess_token());
+                        intent.putExtra("flightsToken", "Bearer " + token.getAccess_token());
                         startActivity(intent);
                     }
                 } else {
