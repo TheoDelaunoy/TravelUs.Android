@@ -21,5 +21,8 @@ public interface AirportInterface {
     Call<String> getEnglishCity(
             @Query("city") String city);
 
+    @GET("aeroports/iataToAirport.php")
+    Call<DatabaseAirport> getAirportFromIata(
+            @Query("iata") String iata);
 
 }

@@ -9,4 +9,31 @@ public class Datum {
     private Price price;
     private Links links;
 
+    public String getType() {
+        return type;
+    }
+
+    public String getOrigin() {
+        return origin;
+    }
+
+    public String getDestination() {
+        return destination;
+    }
+
+    public String getDepartureDate() {
+        return departureDate;
+    }
+
+    public String getReturnDate() {
+        return returnDate;
+    }
+
+    public Price getPrice() {
+        return price;
+    }
+
+    public Links getLinks() {
+        return links;
+    }
 }

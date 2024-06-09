@@ -12,11 +12,13 @@ import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
 import com.example.travelusandroid.FlightAPI.CityInterface;
 import com.example.travelusandroid.FlightAPI.FlightInterface;
+import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.example.travelusandroid.Models.Requests.AmadeusFlightAnywhere;
 import com.example.travelusandroid.Models.Requests.CityIATA.CityIATA;
 import com.example.travelusandroid.Models.Requests.CityIATA.LocationData;
 import com.example.travelusandroid.R;
+import com.example.travelusandroid.Utils.ListUtils;
 import com.example.travelusandroid.Utils.StringUtils;
 
 import android.os.Handler;
@@ -37,8 +39,11 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -59,6 +64,8 @@ public class InspirationActivity extends AppCompatActivity {
     private List<String> allCities;
     private String departureDate;
     private List<FlightInspirationParameters> flightInspirationParametersList;
+    private List<List<String>> allDestinations = new ArrayList<>();
+    private ArrayAdapter<String> adapter;
 
 
     @Override
@@ -258,7 +265,13 @@ public class InspirationActivity extends AppCompatActivity {
                     }
                     Response<AmadeusFlightAnywhere> response = call.execute();
                     AmadeusFlightAnywhere inspirations = response.body();
-                    // TODO: Put Inspiration City in Top List
+                    List<String> destinations = new ArrayList<>();
+                    for(int i = 0; i< inspirations.getData().size(); i++ ){
+                        destinations.add(inspirations.getData().get(i).getDestination());
+                    }
+                    Set<String> destinationSet = new HashSet<>(destinations);
+                    List<String> uniqueDestinations = new ArrayList<>(destinationSet);
+                    allDestinations.add(uniqueDestinations);
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
                         @Override
                         public void run() {
@@ -344,18 +357,67 @@ public class InspirationActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void waitForAllInspirationsToBeFound(CountDownLatch inspirationLatch){
+    private void waitForAllInspirationsToBeFound(CountDownLatch inspirationLatch) {
         new Thread(() -> {
             try {
                 inspirationLatch.await(); // Wait until the count reaches zero
             } catch (InterruptedException e) {
                 Log.d("Stack Trace", Objects.requireNonNull(e.getMessage()));
             }
-            Log.d("Latch", "Latch finished");
-            //TODO: Continue here (Get Only Common Cities, Display Them...)
+
+            // Get the intersection of all destinations
+            List<String> intersectionDestinations = ListUtils.getIntersection(allDestinations);
+
+            List<DatabaseAirport> destinationAirports = new ArrayList<>();
+            for (String intersectionDestination : intersectionDestinations) {
+                try {
+                    DatabaseAirport destinationAirport = getAirportFromIata(intersectionDestination).thenApply(airport -> {
+                        return airport;
+                    }).get();
+                    destinationAirports.add(destinationAirport);
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            // Extract city names
+            List<String> cities = new ArrayList<>();
+            for (DatabaseAirport airport : destinationAirports) {
+                cities.add(airport.getCity());
+            }
+
+            // Update ListView and TextView on UI thread
+            runOnUiThread(() -> {
+                // Update the TextView with the number of cities
+                airportLabel.setText(String.valueOf(cities.size()));
+
+                // Update the ListView
+                adapter = new ArrayAdapter<>(this, R.layout.destination_cell, R.id.cityTextView, cities);
+                destinationCell.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
+            });
         }).start();
     }
 
+
+
+    public CompletableFuture<DatabaseAirport> getAirportFromIata(String iata) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
+                Call<DatabaseAirport> call = airportInterface.getAirportFromIata(iata);
+                Response<DatabaseAirport> response = call.execute();
+
+                if (response.isSuccessful() && response.body() != null) {
+                    return response.body();
+                } else {
+                    throw new IOException("Database Error: " + response.code());
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
 
     private String extractCityName(String input) {
         int index = input.indexOf('(');
