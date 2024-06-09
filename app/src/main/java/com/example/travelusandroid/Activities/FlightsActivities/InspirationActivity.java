@@ -43,7 +43,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -121,7 +120,7 @@ public class InspirationActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 userLayout.removeView((View) v.getParent());
-                if (userLayout.getChildCount() == 0) { // Ajustez la condition selon votre logique
+                if (userLayout.getChildCount() == 0) {
                     labelStack.setVisibility(View.GONE);
                 }
             }
@@ -158,8 +157,13 @@ public class InspirationActivity extends AppCompatActivity {
     }
 
     private void searchButtonClicked() {
+        //TODO: it does not work with budget but it works with stepovers
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
         flightInspirationParametersList = new ArrayList<>();
+        //REFRESH EVERYTHING
+        allDestinations = new ArrayList<>();
+        adapter = null;
+
         int year = dateDeparture.getYear();
         int month = dateDeparture.getMonth() + 1;
         int dayOfMonth = dateDeparture.getDayOfMonth();
@@ -189,8 +193,8 @@ public class InspirationActivity extends AppCompatActivity {
 
             AutoCompleteTextView city = (AutoCompleteTextView) linearLayout.getChildAt(0);
             String cityText = city.getText().toString();
-
-            EditText budget = (EditText) linearLayout.getChildAt(1);
+            EditText budget = null;
+            budget = (EditText) linearLayout.getChildAt(1);
             int budgetInt = 0;
             if (!budget.getText().toString().isEmpty()) {
                 budgetInt = Integer.parseInt(budget.getText().toString());
@@ -204,7 +208,7 @@ public class InspirationActivity extends AppCompatActivity {
             flightInspirationParameters.setBudget(budgetInt);
             flightInspirationParameters.setHasStopovers(hasStepoversBoolean);
             flightInspirationParametersList.add(flightInspirationParameters);
-            // TO CHANGE
+
             fetchEnglishCity(latch, flightInspirationParameters, i);
         }
     }
