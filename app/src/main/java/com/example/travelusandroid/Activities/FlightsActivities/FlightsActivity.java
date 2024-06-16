@@ -5,19 +5,17 @@ import android.os.Bundle;
 
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
-import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.view.View;
-import android.widget.Toast;
-
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
-import com.example.travelusandroid.databinding.ActivityFlightsBinding;
+import android.view.Menu;
+import android.view.MenuItem;
 
 import com.example.travelusandroid.R;
 
@@ -25,42 +23,47 @@ import java.util.ArrayList;
 
 public class FlightsActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityFlightsBinding binding;
+    private BottomNavigationView bottomNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_flights);
 
         Intent intent = getIntent();
         DatabaseAirport destinationAirport = (DatabaseAirport) intent.getSerializableExtra("destinationAirport");
         ArrayList<FlightInspirationParameters> flightInspirationParameters = intent.getParcelableArrayListExtra("originAirportsParameters");
-        Toast.makeText(FlightsActivity.this, destinationAirport.getAirports(), Toast.LENGTH_SHORT).show();
-        Toast.makeText(FlightsActivity.this, flightInspirationParameters.get(0).getDepartureCity(), Toast.LENGTH_SHORT).show();
 
-        binding = ActivityFlightsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-
-        setSupportActionBar(binding.toolbar);
-
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_flights);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-        binding.fab.setOnClickListener(new View.OnClickListener() {
+        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        addMenuItems(bottomNavigationView.getMenu(), flightInspirationParameters);
+        bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", null).show();
+            public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+                Fragment selectedFragment = null;
+
+                selectedFragment = FlightFragmentActivity.newInstance(menuItem.getItemId(), flightInspirationParameters);
+
+                if (selectedFragment != null) {
+                    FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+                    transaction.replace(R.id.fragment_container, selectedFragment);
+                    transaction.commit();
+                }
+
+                return true;
             }
         });
+
+        // Set the initial fragment
+        if (savedInstanceState == null) {
+            bottomNavigationView.setSelectedItemId(0);
+        }
     }
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_flights);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+    private void addMenuItems(Menu menu, ArrayList<FlightInspirationParameters> flightInspirationParameters) {
+        // Add items dynamically
+        for(int i=0; i<flightInspirationParameters.size(); ++i)
+        {
+            menu.add(Menu.NONE, i, Menu.NONE, flightInspirationParameters.get(i).getDepartureCity());
+        }
     }
 }

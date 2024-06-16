@@ -17,6 +17,9 @@
         android:theme="@style/Theme.TravelUsAndroid"
         tools:targetApi="31">
         <activity
+            android:name=".Activities.FlightsActivities.FlightFragmentActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activities.FlightsActivities.FlightsActivity"
             android:exported="false"
             android:theme="@style/Theme.TravelUsAndroid" />
