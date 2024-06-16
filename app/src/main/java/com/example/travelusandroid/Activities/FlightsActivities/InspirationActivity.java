@@ -12,7 +12,6 @@ import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
 import com.example.travelusandroid.FlightAPI.CityInterface;
 import com.example.travelusandroid.FlightAPI.FlightInterface;
-import com.example.travelusandroid.MainActivity;
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.example.travelusandroid.Models.Requests.AmadeusFlightAnywhere;
@@ -24,6 +23,7 @@ import com.example.travelusandroid.Utils.StringUtils;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,7 +67,7 @@ public class InspirationActivity extends AppCompatActivity {
     private List<FlightInspirationParameters> flightInspirationParametersList;
     private List<List<String>> allDestinations = new ArrayList<>();
     private ArrayAdapter<String> adapter;
-    private List<DatabaseAirport> finalDestinations = new ArrayList<>();
+    private List<DatabaseAirport> finalDestinations;
 
 
 
@@ -109,6 +109,7 @@ public class InspirationActivity extends AppCompatActivity {
                 Toast.makeText(InspirationActivity.this, "Clicked: " + selectedAirport.getAirports(), Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(InspirationActivity.this, FlightsActivity.class);
                 intent.putExtra("destinationAirport", selectedAirport);
+                intent.putParcelableArrayListExtra("originAirportsParameters", (ArrayList<? extends Parcelable>) flightInspirationParametersList);
                 startActivity(intent);
             }
         });
@@ -171,10 +172,9 @@ public class InspirationActivity extends AppCompatActivity {
     }
 
     private void searchButtonClicked() {
-        //TODO: it does not work with budget but it works with stepovers
+        finalDestinations = new ArrayList<>();
         Toast.makeText(this, "Recherche de vols en cours...", Toast.LENGTH_SHORT).show();
         flightInspirationParametersList = new ArrayList<>();
-        //REFRESH EVERYTHING
         allDestinations = new ArrayList<>();
         adapter = null;
 
@@ -225,6 +225,7 @@ public class InspirationActivity extends AppCompatActivity {
 
             fetchEnglishCity(latch, flightInspirationParameters, i);
         }
+
     }
 
     private void fetchEnglishCity(CountDownLatch latch, FlightInspirationParameters flightInspirationParameters, int iteration) {

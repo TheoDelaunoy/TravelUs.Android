@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
+import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,6 +21,8 @@ import com.example.travelusandroid.databinding.ActivityFlightsBinding;
 
 import com.example.travelusandroid.R;
 
+import java.util.ArrayList;
+
 public class FlightsActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
@@ -31,7 +34,9 @@ public class FlightsActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         DatabaseAirport destinationAirport = (DatabaseAirport) intent.getSerializableExtra("destinationAirport");
-        Toast.makeText(FlightsActivity.this, "Clicked: " + destinationAirport.getAirports(), Toast.LENGTH_SHORT).show();
+        ArrayList<FlightInspirationParameters> flightInspirationParameters = intent.getParcelableArrayListExtra("originAirportsParameters");
+        Toast.makeText(FlightsActivity.this, destinationAirport.getAirports(), Toast.LENGTH_SHORT).show();
+        Toast.makeText(FlightsActivity.this, flightInspirationParameters.get(0).getDepartureCity(), Toast.LENGTH_SHORT).show();
 
         binding = ActivityFlightsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
