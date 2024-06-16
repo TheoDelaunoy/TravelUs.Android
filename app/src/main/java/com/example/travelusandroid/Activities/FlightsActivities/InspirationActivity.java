@@ -12,6 +12,7 @@ import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
 import com.example.travelusandroid.FlightAPI.CityInterface;
 import com.example.travelusandroid.FlightAPI.FlightInterface;
+import com.example.travelusandroid.MainActivity;
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.example.travelusandroid.Models.Requests.AmadeusFlightAnywhere;
@@ -26,6 +27,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -65,6 +67,8 @@ public class InspirationActivity extends AppCompatActivity {
     private List<FlightInspirationParameters> flightInspirationParametersList;
     private List<List<String>> allDestinations = new ArrayList<>();
     private ArrayAdapter<String> adapter;
+    private List<DatabaseAirport> finalDestinations = new ArrayList<>();
+
 
 
     @Override
@@ -76,7 +80,6 @@ public class InspirationActivity extends AppCompatActivity {
         getCities();
         setContentView(R.layout.activity_inspiration);
 
-        //frameStack = findViewById(R.id.frameStack);
         labelStack = findViewById(R.id.labelStack);
         userLayout = findViewById(R.id.userLayout);
         dateDeparture = findViewById(R.id.dateDeparture);
@@ -96,6 +99,17 @@ public class InspirationActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                     searchButtonClicked();
+            }
+        });
+
+        destinationCell.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                DatabaseAirport selectedAirport = finalDestinations.get(position);
+                Toast.makeText(InspirationActivity.this, "Clicked: " + selectedAirport.getAirports(), Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(InspirationActivity.this, FlightsActivity.class);
+                intent.putExtra("destinationAirport", selectedAirport);
+                startActivity(intent);
             }
         });
     }
@@ -372,33 +386,33 @@ public class InspirationActivity extends AppCompatActivity {
             // Get the intersection of all destinations
             List<String> intersectionDestinations = ListUtils.getIntersection(allDestinations);
 
-            List<DatabaseAirport> destinationAirports = new ArrayList<>();
             for (String intersectionDestination : intersectionDestinations) {
                 try {
                     DatabaseAirport destinationAirport = getAirportFromIata(intersectionDestination).thenApply(airport -> {
                         return airport;
                     }).get();
-                    destinationAirports.add(destinationAirport);
+                    finalDestinations.add(destinationAirport);
                 } catch (ExecutionException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
 
             // Extract city names
-            List<String> cities = new ArrayList<>();
-            for (DatabaseAirport airport : destinationAirports) {
-                cities.add(airport.getCity());
+            List<String> finalCities = new ArrayList<>();
+            for (DatabaseAirport airport : finalDestinations) {
+                finalCities.add(airport.getCity());
             }
 
             // Update ListView and TextView on UI thread
             runOnUiThread(() -> {
                 // Update the TextView with the number of cities
-                airportLabel.setText(String.valueOf(cities.size()));
+                airportLabel.setText(String.valueOf(finalCities.size()));
 
                 // Update the ListView
-                adapter = new ArrayAdapter<>(this, R.layout.destination_cell, R.id.cityTextView, cities);
+                adapter = new ArrayAdapter<>(this, R.layout.destination_cell, R.id.cityTextView, finalCities);
                 destinationCell.setAdapter(adapter);
                 adapter.notifyDataSetChanged();
+
             });
         }).start();
     }

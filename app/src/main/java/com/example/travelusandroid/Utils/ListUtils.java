@@ -16,7 +16,7 @@ public class ListUtils {
         for (int i = 1; i < listOfLists.size(); i++) {
             intersection.retainAll(listOfLists.get(i));
         }
-        List<String> instersectionList = new ArrayList<>(intersection);
-        return instersectionList;
+        List<String> intersectionList = new ArrayList<>(intersection);
+        return intersectionList;
     }
 }

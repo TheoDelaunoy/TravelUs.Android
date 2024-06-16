@@ -1,6 +1,8 @@
 package com.example.travelusandroid.Models.Basics;
 
-public class DatabaseAirport {
+import java.io.Serializable;
+
+public class DatabaseAirport implements Serializable {
     private int id;
     private String iata;
     private String airports;
