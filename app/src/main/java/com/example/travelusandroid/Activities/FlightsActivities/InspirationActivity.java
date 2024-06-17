@@ -6,20 +6,17 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.travelusandroid.Datas.AirportInterface;
+import com.example.travelusandroid.Datas.AirportCompletableFuture;
 import com.example.travelusandroid.Datas.DatabaseClient;
 import com.example.travelusandroid.Datas.OnReceived.OnEnglishCityReceived;
 import com.example.travelusandroid.Datas.OnReceived.OnInspirationReceived;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
-import com.example.travelusandroid.FlightAPI.CityInterface;
 import com.example.travelusandroid.FlightAPI.FlightInterface;
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.example.travelusandroid.Models.Requests.AmadeusFlightAnywhere;
-import com.example.travelusandroid.Models.Requests.CityIATA.CityIATA;
-import com.example.travelusandroid.Models.Requests.CityIATA.LocationData;
 import com.example.travelusandroid.R;
 import com.example.travelusandroid.Utils.ListUtils;
-import com.example.travelusandroid.Utils.StringUtils;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -68,7 +65,6 @@ public class InspirationActivity extends AppCompatActivity {
     private List<List<String>> allDestinations = new ArrayList<>();
     private ArrayAdapter<String> adapter;
     private List<DatabaseAirport> finalDestinations;
-
 
 
     @Override
@@ -271,7 +267,7 @@ public class InspirationActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    String cityIATA = getIata(flightInspirationParameters.getDepartureCity()).thenApply(iataCode -> {
+                    String cityIATA = AirportCompletableFuture.getIata(flightInspirationParameters.getDepartureCity(), token).thenApply(iataCode -> {
                         return iataCode;
                     }).get();
                     flightInspirationParameters.setCityIata(cityIATA);
@@ -312,32 +308,6 @@ public class InspirationActivity extends AppCompatActivity {
             }
         }).start();
     }
-
-    public CompletableFuture<String> getIata(String departureCity) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                CityInterface cityInterface = AmadeusClient.getClient().create(CityInterface.class);
-                Call<CityIATA> call = cityInterface.getCityIata(token, StringUtils.trimEnd(departureCity), "1");
-                Response<CityIATA> response = call.execute();
-
-                if (response.isSuccessful() && response.body() != null) {
-                    CityIATA cityIATA = response.body();
-                    List<LocationData> data = cityIATA.getData();
-
-                    if (data != null && !data.isEmpty()) {
-                        return data.get(0).getIataCode();
-                    } else {
-                        throw new RuntimeException("No data available");
-                    }
-                } else {
-                    throw new IOException("API Error: " + response.code());
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
 
     public void getEnglishCitySynchronous(final OnEnglishCityReceived listener, FlightInspirationParameters flightInspirationParameters, int iteration) {
         new Thread(new Runnable() {
@@ -389,7 +359,7 @@ public class InspirationActivity extends AppCompatActivity {
 
             for (String intersectionDestination : intersectionDestinations) {
                 try {
-                    DatabaseAirport destinationAirport = getAirportFromIata(intersectionDestination).thenApply(airport -> {
+                    DatabaseAirport destinationAirport = AirportCompletableFuture.getAirportFromIata(intersectionDestination).thenApply(airport -> {
                         return airport;
                     }).get();
                     finalDestinations.add(destinationAirport);
@@ -416,26 +386,6 @@ public class InspirationActivity extends AppCompatActivity {
 
             });
         }).start();
-    }
-
-
-
-    public CompletableFuture<DatabaseAirport> getAirportFromIata(String iata) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
-                Call<DatabaseAirport> call = airportInterface.getAirportFromIata(iata);
-                Response<DatabaseAirport> response = call.execute();
-
-                if (response.isSuccessful() && response.body() != null) {
-                    return response.body();
-                } else {
-                    throw new IOException("Database Error: " + response.code());
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
     }
 
     private String extractCityName(String input) {

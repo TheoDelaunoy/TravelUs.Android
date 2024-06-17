@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -14,18 +15,21 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.travelusandroid.Datas.AirportCompletableFuture;
+import com.example.travelusandroid.Models.Basics.DatabaseAirport;
 import com.example.travelusandroid.Models.Basics.FlightInspirationParameters;
 import com.example.travelusandroid.R;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 public class FlightFragmentActivity extends Fragment {
 
     private static final String INDEX = "index";
     private static final String ORIGIN_AIRPORT_PARAMETERS = "originAirportsParameters";
-
     private int indexParameter;
     private ArrayList<FlightInspirationParameters> originAirportsParameters;
+
 
     public FlightFragmentActivity() {
         // Required empty public constructor
@@ -46,6 +50,18 @@ public class FlightFragmentActivity extends Fragment {
         if (getArguments() != null) {
             indexParameter = getArguments().getInt(INDEX);
             originAirportsParameters = getArguments().getParcelableArrayList(ORIGIN_AIRPORT_PARAMETERS);
+            //TextView fragmentText = (TextView) getView().findViewById(R.id.fragmentText);
+            FlightInspirationParameters originAirportParameters = originAirportsParameters.get(indexParameter);
+            /*try {
+                DatabaseAirport originAirport = AirportCompletableFuture.getAirportFromIata(originAirportParameters.getCityIata()).thenApply(airport -> {
+                    return airport;
+                }).get();
+                fragmentText.setText(originAirport.getAirports());
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }*/
         }
     }
 
