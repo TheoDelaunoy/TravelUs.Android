@@ -50,6 +50,7 @@ public class FlightFragmentActivity extends Fragment {
         if (getArguments() != null) {
             indexParameter = getArguments().getInt(INDEX);
             originAirportsParameters = getArguments().getParcelableArrayList(ORIGIN_AIRPORT_PARAMETERS);
+            //TODO: Next line is the problematic one
             //TextView fragmentText = (TextView) getView().findViewById(R.id.fragmentText);
             FlightInspirationParameters originAirportParameters = originAirportsParameters.get(indexParameter);
             /*try {
