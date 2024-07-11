@@ -1,5 +1,7 @@
-package com.example.travelusandroid.Datas;
+package com.example.travelusandroid.Datas.CompletableFuture;
 
+import com.example.travelusandroid.Datas.AirportInterface;
+import com.example.travelusandroid.Datas.DatabaseClient;
 import com.example.travelusandroid.FlightAPI.AmadeusClient;
 import com.example.travelusandroid.FlightAPI.CityInterface;
 import com.example.travelusandroid.Models.Basics.DatabaseAirport;
@@ -22,6 +24,24 @@ public class AirportCompletableFuture {
                 AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
                 Call<DatabaseAirport> call = airportInterface.getAirportFromIata(iata);
                 Response<DatabaseAirport> response = call.execute();
+
+                if (response.isSuccessful() && response.body() != null) {
+                    return response.body();
+                } else {
+                    throw new IOException("Database Error: " + response.code());
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    public static CompletableFuture<String> getEnglishCity(String frenchCity) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                AirportInterface airportInterface = DatabaseClient.getClient().create(AirportInterface.class);
+                Call<String> call = airportInterface.getEnglishCity(frenchCity);
+                Response<String> response = call.execute();
 
                 if (response.isSuccessful() && response.body() != null) {
                     return response.body();
